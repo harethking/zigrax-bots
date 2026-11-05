@@ -72,7 +72,7 @@ function saver(key) {
     if (fs.existsSync(av)) {
       const has = await bot.api.getUserProfilePhotos(bot.botInfo.id, { limit: 1 }).then(r => r.total_count > 0).catch(() => true);
       if (!has || process.env.FORCE_AVATAR === '1') {
-        const { InputFile } = require('./games-bot/node_modules/grammy');
+        const { InputFile } = require(`./${d.key === 'games' ? 'games-bot' : 'group-bot'}/node_modules/grammy`);
         await bot.api.setMyProfilePhoto({ type: 'static', photo: new InputFile(av) })
           .then(() => console.log(`🖼 avatar set: ${d.key}`))
           .catch(e => console.error(`avatar ${d.key}:`, e.description || e.message));
