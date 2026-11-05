@@ -67,6 +67,17 @@ function saver(key) {
     bot.api.setMyCommands(d.cmds.map(([command, description]) => ({ command, description }))).catch(() => {});
     bot.api.setMyDescription(d.desc).catch(() => {});
     bot.api.setMyShortDescription(d.short).catch(() => {});
+    // صورة البروفايل: تنحط إذا البوت ما عنده صورة (أو FORCE_AVATAR=1)
+    const av = path.join(__dirname, 'avatars', `${d.key}.jpg`);
+    if (fs.existsSync(av)) {
+      const has = await bot.api.getUserProfilePhotos(bot.botInfo.id, { limit: 1 }).then(r => r.total_count > 0).catch(() => true);
+      if (!has || process.env.FORCE_AVATAR === '1') {
+        const { InputFile } = require('./games-bot/node_modules/grammy');
+        await bot.api.setMyProfilePhoto({ type: 'static', photo: new InputFile(av) })
+          .then(() => console.log(`🖼 avatar set: ${d.key}`))
+          .catch(e => console.error(`avatar ${d.key}:`, e.description || e.message));
+      }
+    }
     bots.push({ ...d, bot });
     console.log(`✅ ${d.key}: @${bot.botInfo.username}`);
   }
