@@ -369,6 +369,8 @@ CMDS.sort((a, b) => b.n.length - a.n.length); // الأطول أولاً حتى 
 /* ================== البوت ================== */
 function createBot(token, opts) {
   const bot = new Bot(token, opts);
+  const isCmd = txt => { const t = norm(String(txt || '').trim()).replace(/@\w+bot\b/i, ''); return CMDS.some(k => t === k.n || t.startsWith(k.n + ' ') || t.startsWith(k.n + '\n')); };
+  require('../force-sub').install(bot, () => db, save, ctx => ctx.chat?.type === 'private' || !!ctx.callbackQuery || isCmd(ctx.msg?.text));
   const isGroup = ctx => ['group', 'supergroup'].includes(ctx.chat?.type);
 
   bot.command('start', async ctx => {

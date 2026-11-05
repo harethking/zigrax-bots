@@ -474,6 +474,7 @@ async function show(ctx, { text, rows }) {
 
 function createBot(token, botOpts) {
   const bot = new Bot(token, botOpts);
+  require('../force-sub').install(bot, () => db, save, ctx => ctx.chat?.type === 'private' || !!ctx.callbackQuery || /^\//.test(ctx.msg?.text || ''));
 
   bot.command('start', ctx => show(ctx, menuView(ctx.from)));
   bot.command(['games', 'menu'], ctx => show(ctx, menuView(ctx.from)));
