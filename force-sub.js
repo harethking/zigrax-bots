@@ -10,7 +10,8 @@ const DEVS = () => String(process.env.DEV_IDS || '').split(/[,\s]+/).filter(Bool
 const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const N = s => s.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه');
 const OK = new Set(['member', 'administrator', 'creator']);
-const cache = new Map(); // `${channel}:${user}` → وقت آخر تحقق ناجح
+const cache = new Map();
+const pending = new Map(); // مطور ينتظر يدز معرف قناة // `${channel}:${user}` → وقت آخر تحقق ناجح
 
 /**
  * @param bot grammY Bot
@@ -44,11 +45,18 @@ function install(bot, getDb, save, shouldCheck = () => true) {
   bot.on('message:text', async (ctx, next) => {
     if (ctx.chat.type !== 'private' || !DEVS().includes(ctx.from.id)) return next();
     const t = N(ctx.msg.text.trim()), c = cfg();
-    const arg = ctx.msg.text.trim().split(/\s+/).slice(2).join(' ').trim();
+    let arg = ctx.msg.text.trim().split(/\s+/).slice(2).join(' ').trim();
     const reply = s => ctx.reply(s, { parse_mode: 'HTML', link_preview_options: { is_disabled: true } });
-    if (t.startsWith('اضف قناه')) {
-      if (!arg) return reply('الصيغة: <code>اضف قناة @username</code>\nأو ايدي القناة مثل <code>-100123456789</code>');
-      const id = /^-?\d+$/.test(arg) ? Number(arg) : (arg.startsWith('@') ? arg : '@' + arg.replace(/^https?:\/\/t\.me\//, ''));
+    if (t.startsWith('اضف قناه') || t.startsWith('حذف قناه')) pending.delete(ctx.from.id);
+    if (t.startsWith('اضف قناه') && !arg) { pending.set(ctx.from.id, Date.now()); return reply('📢 هسه دزلي معرف القناة أو رابطها\nمثل: <code>@storee45</code> أو <code>https://t.me/storee45</code>\nأو حوّلّي أي منشور من القناة'); }
+    if (pending.has(ctx.from.id) && Date.now() - pending.get(ctx.from.id) < 10 * 60e3 && !/^(القنوات|حذف|تفعيل|تعطيل|\/)/.test(t)) { pending.delete(ctx.from.id); return addChannel(ctx, ctx.msg.text.trim(), reply, c); }
+    if (t.startsWith('اضف قناه')) return addChannel(ctx, arg, reply, c);
+    return next2(ctx, next, t, arg, reply, c);
+  });
+  async function addChannel(ctx, arg, reply, c) {
+      arg = String(arg).trim().replace(/^https?:\/\/(t|telegram)\.me\//i, '').replace(/\/.*$/, '');
+      if (!arg || /^\+/.test(arg)) return reply('❌ ما أكدر أستخدم رابط دعوة خاص. دزلي معرف القناة (@...) أو حوّلّي منشور منها');
+      const id = typeof arg === 'number' || /^-?\d+$/.test(arg) ? Number(arg) : (arg.startsWith('@') ? arg : '@' + arg);
       try {
         const chat = await ctx.api.getChat(id);
         const me = await ctx.api.getChatMember(chat.id, ctx.me.id);
@@ -59,7 +67,8 @@ function install(bot, getDb, save, shouldCheck = () => true) {
         save();
         return reply(`✅ انضافت «${esc(chat.title)}»\nعدد القنوات: ${c.list.length}${c.on ? '' : '\n⚠️ الاشتراك الإجباري معطّل، فعّله بـ «تفعيل الاشتراك»'}`);
       } catch (e) { return reply(`❌ ما كدرت أوصل للقناة: ${esc(e.description || e.message)}\nتأكد المعرف صح والبوت مضاف مشرف بيها`); }
-    }
+  }
+  async function next2(ctx, next, t, arg, reply, c) {
     if (t.startsWith('حذف قناه')) {
       const before = c.list.length;
       const a = arg.replace(/^@/, '').toLowerCase();
@@ -72,6 +81,14 @@ function install(bot, getDb, save, shouldCheck = () => true) {
     }
     if (t === 'تفعيل الاشتراك' || t === 'تعطيل الاشتراك') { c.on = t.startsWith('تفعيل'); save(); return reply(c.on ? '✅ تم تفعيل الاشتراك الإجباري' : '❌ تم تعطيل الاشتراك الإجباري'); }
     return next();
+  }
+
+  // توجيه منشور من قناة (للمطور) ← إضافتها
+  bot.on('message', async (ctx, next) => {
+    const o = ctx.msg.forward_origin;
+    if (ctx.chat.type !== 'private' || !DEVS().includes(ctx.from.id) || o?.type !== 'channel') return next();
+    pending.delete(ctx.from.id);
+    return addChannel(ctx, o.chat.id, s => ctx.reply(s, { parse_mode: 'HTML', link_preview_options: { is_disabled: true } }), cfg());
   });
 
   // زر «اشتركت»
