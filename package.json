@@ -1,0 +1,9 @@
+{
+  "name": "zigrax-bots",
+  "private": true,
+  "scripts": {
+    "postinstall": "cd games-bot && npm install && cd ../group-bot && npm install",
+    "start": "node server.js"
+  },
+  "engines": { "node": ">=18" }
+}

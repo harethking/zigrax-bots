@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: zigrax-bots
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: GAMES_TOKEN
+        sync: false
+      - key: GUARD_TOKEN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false

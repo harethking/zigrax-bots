@@ -1,0 +1,14 @@
+{
+  "name": "group-guard-bot",
+  "version": "1.0.0",
+  "description": "بوت حماية وإدارة مجموعات تلكرام",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "grammy": "^1.46.0"
+  }
+}
